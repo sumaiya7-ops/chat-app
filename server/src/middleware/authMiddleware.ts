@@ -5,7 +5,11 @@ interface AuthRequest extends Request {
   user?: any;
 }
 
-const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+const authMiddleware = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -13,20 +17,25 @@ const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => 
       return res.status(401).json({ message: "No token, access denied" });
     }
 
-    // format: Bearer token
-    const token = authHeader.split(" ")[1];
+    // Expected format: Bearer <token>
+    const parts = authHeader.split(" ");
 
-    if (!token) {
+    if (parts.length !== 2) {
       return res.status(401).json({ message: "Invalid token format" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+    const token = parts[1];
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    );
 
     req.user = decoded;
 
-    next();
+    return next();
   } catch (error) {
-    return res.status(401).json({ message: "Token not valid" });
+    return res.status(401).json({ message: "Token not valid or expired" });
   }
 };
 

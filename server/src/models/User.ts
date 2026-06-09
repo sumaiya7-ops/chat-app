@@ -12,12 +12,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
     },
 
     phone: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     password: {
@@ -33,6 +35,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
+/* Prevent model overwrite in dev (Next.js / nodemon issue fix) */
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 export default User;
