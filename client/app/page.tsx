@@ -11,7 +11,9 @@ export default function Home() {
   const [chat, setChat] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+
   const emojis = ["😊", "😂", "❤️", "🔥", "👍"];
+
   const currentUser = { id: "user1", name: "kookie" };
 
   /* USERS LOAD */
@@ -21,13 +23,13 @@ export default function Home() {
         const res = await fetch("http://localhost:5000/api/users");
         const data = await res.json();
 
-        const filteredUsers = data.filter(
+        const filtered = data.filter(
           (u: any) => u._id !== currentUser.id
         );
 
-        setUsers(filteredUsers.length > 0 ? filteredUsers : data);
-      } catch (error) {
-        console.error(error);
+        setUsers(filtered);
+      } catch (err) {
+        console.error(err);
       }
     };
 
@@ -38,7 +40,7 @@ export default function Home() {
   useEffect(() => {
     if (!selectedUser) return;
 
-    const loadChatHistory = async () => {
+    const loadChat = async () => {
       try {
         const res = await fetch(
           `http://localhost:5000/api/messages?sender=${currentUser.id}&receiver=${selectedUser._id}`
@@ -46,12 +48,12 @@ export default function Home() {
 
         const data = await res.json();
         setChat(data);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
       }
     };
 
-    loadChatHistory();
+    loadChat();
   }, [selectedUser]);
 
   /* SOCKET */
@@ -64,11 +66,7 @@ export default function Home() {
         .join("_");
 
       if (data.roomId === roomId) {
-        setChat((prev) => {
-          const exists = prev.some((m) => m._id === data._id);
-          if (exists) return prev;
-          return [...prev, data];
-        });
+        setChat((prev) => [...prev, data]);
       }
     };
 
@@ -79,7 +77,7 @@ export default function Home() {
     };
   }, [selectedUser]);
 
-  /* CREATE ROOM */
+  /* ROOM */
   const createRoom = (user: any) => {
     setSelectedUser(user);
 
@@ -91,7 +89,9 @@ export default function Home() {
   const sendMessage = () => {
     if (!selectedUser || !message.trim()) return;
 
-    const roomId = [currentUser.id, selectedUser._id].sort().join("_");
+    const roomId = [currentUser.id, selectedUser._id]
+      .sort()
+      .join("_");
 
     socket.emit("send_message", {
       senderId: currentUser.id,
@@ -114,64 +114,34 @@ export default function Home() {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        fontFamily: "Segoe UI",
-        backgroundColor: "#f0f2f5",
-      }}
-    >
-      {/* LEFT SIDE */}
-      <div
-        style={{
-          width: "320px",
-          backgroundColor: "#fff",
-          borderRight: "1px solid #ddd",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <div style={{ padding: "10px" }}>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "Segoe UI", background: "#f0f2f5" }}>
+
+      {/* LEFT */}
+      <div style={{ width: 320, background: "#fff", borderRight: "1px solid #ddd", display: "flex", flexDirection: "column" }}>
+
+        <div style={{ padding: 10 }}>
           <input
-            type="text"
-            placeholder="🔍 Search user..."
+            placeholder="🔍 Search user"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #ddd",
-              marginBottom: "10px",
-            }}
+            style={{ width: "100%", padding: 10, marginBottom: 10 }}
           />
 
           <input
-            type="text"
-            placeholder="📱 Add by Number"
+            placeholder="📱 Add by number"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #ddd",
-            }}
+            style={{ width: "100%", padding: 10 }}
           />
         </div>
 
-        {/* USERS */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
           {users
-            .filter((user) =>
-              user.name
-                ?.toLowerCase()
-                .includes(search.toLowerCase())
+            .filter((u) =>
+              u.name?.toLowerCase().includes(search.toLowerCase())
             )
             .map((user) => {
-              const isSelected =
-                selectedUser?._id === user._id;
+              const isSelected = selectedUser?._id === user._id;
 
               return (
                 <div
@@ -180,11 +150,9 @@ export default function Home() {
                   style={{
                     padding: 10,
                     cursor: "pointer",
+                    background: isSelected ? "#e7f3ff" : "transparent",
                     borderRadius: 8,
                     marginBottom: 5,
-                    backgroundColor: isSelected
-                      ? "#e7f3ff"
-                      : "transparent",
                   }}
                 >
                   {user.name}
@@ -194,47 +162,29 @@ export default function Home() {
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* CHAT BOX */}
-        <div
-          style={{
-            flex: 1,
-            padding: 20,
-            overflowY: "auto",
-          }}
-        >
+      {/* RIGHT */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+        {/* CHAT */}
+        <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
           {chat.map((msg, i) => {
-            const isMe =
-              msg.senderId === currentUser.id;
+            const isMe = msg.senderId === currentUser.id;
 
             return (
               <div
                 key={i}
                 style={{
                   display: "flex",
-                  justifyContent: isMe
-                    ? "flex-end"
-                    : "flex-start",
+                  justifyContent: isMe ? "flex-end" : "flex-start",
                   marginBottom: 10,
                 }}
               >
                 <div
                   style={{
                     padding: "10px 15px",
-                    borderRadius: 10,
-                    background: isMe
-                      ? "#0084ff"
-                      : "#fff",
-                    color: isMe
-                      ? "#fff"
-                      : "#000",
+                    borderRadius: 15,
+                    background: isMe ? "#0084ff" : "#fff",
+                    color: isMe ? "#fff" : "#000",
                   }}
                 >
                   {msg.text}
@@ -245,12 +195,13 @@ export default function Home() {
         </div>
 
         {/* INPUT */}
- <div style={{ display: "flex", padding: 10, gap: 5 }}>
+        <div style={{ display: "flex", padding: 10, gap: 5 }}>
+
           {emojis.map((e, i) => (
             <button
               key={i}
-              onClick={() => setMessage((prev) => prev + e)}
-              style={{ fontSize: 18, background: "none", border: "none" }}
+              onClick={() => setMessage((p) => p + e)}
+              style={{ border: "none", background: "transparent", fontSize: 18 }}
             >
               {e}
             </button>
@@ -258,38 +209,32 @@ export default function Home() {
 
           <input
             value={message}
-            onChange={(e) =>
-              setMessage(e.target.value)
-            }
-            onKeyDown={(e) =>
-              e.key === "Enter" && sendMessage()
-            }
-            placeholder="Type a message..."
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            placeholder="Type message..."
             style={{
               flex: 1,
-              padding: "12px",
-              borderRadius: "25px",
+              padding: 12,
+              borderRadius: 25,
               border: "1px solid #ccc",
-              outline: "none",
             }}
           />
 
           <button
             onClick={sendMessage}
             style={{
-              width: "50px",
-              height: "50px",
+              width: 50,
+              height: 50,
               borderRadius: "50%",
-              border: "none",
-              backgroundColor: "#0084ff",
+              background: "#0084ff",
               color: "#fff",
-              fontSize: "20px",
-              cursor: "pointer",
+              border: "none",
             }}
           >
             ➤
           </button>
         </div>
+
       </div>
     </div>
   );
